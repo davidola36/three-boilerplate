@@ -1,5 +1,25 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import GUI from 'lil-gui'
+import gsap from 'gsap'
+
+/** 
+ * Debug
+ */
+
+const gui = new GUI({
+    width: 300,
+    title: 'Nice Debug UI',
+    closeFolders: false
+})
+gui.close()
+// gui.hide()
+window.addEventListener('keydown', (event) => {
+    if(event.key == 'h') {
+        gui.show(gui._hidden)
+    }
+})
+const debugObject = {}
 
 /**
  * Base
@@ -13,10 +33,40 @@ const scene = new THREE.Scene()
 /**
  * Object
  */
-const geometry = new THREE.BoxGeometry(1, 1, 1)
-const material = new THREE.MeshBasicMaterial({ color: 0xff0000 })
+debugObject.color = '#bd0a0a'
+const geometry = new THREE.BoxGeometry(1, 1, 1, 2, 2, 2)
+const material = new THREE.MeshBasicMaterial({ color: debugObject.color, wireframe: true })
 const mesh = new THREE.Mesh(geometry, material)
 scene.add(mesh)
+//use folders to organise tweaks in folders
+const cubeTweaks = gui.addFolder('AwesomeCube')
+
+cubeTweaks.add(mesh.position, 'y').min(-3).max(3).step(0.01).name('Elevation')
+cubeTweaks.add(mesh, 'visible')
+cubeTweaks.add(material, 'wireframe') // or mesh.material
+cubeTweaks.addColor(debugObject, 'color')
+    .onChange(() => {
+        material.color.set(debugObject.color)
+})
+
+debugObject.spin = () => {
+    gsap.to(mesh.rotation, { y: mesh.rotation.y + Math.PI * 2})
+}
+
+cubeTweaks.add(debugObject, 'spin')
+
+debugObject.subdivision = 2
+cubeTweaks.add(debugObject, 'subdivision').min(1).max(20).step(1)
+    .onFinishChange(() => {
+        //ensure to dispose geometry to clear previous geometry from memory for performance
+        mesh.geometry.dispose()
+        mesh.geometry = new THREE.BoxGeometry(
+            1,1,1,
+            debugObject.subdivision, debugObject.subdivision, debugObject.subdivision
+        )
+})
+
+
 
 /**
  * Sizes
@@ -83,6 +133,13 @@ scene.add(camera)
 // Controls
 const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
+//instantiate camera view at shifted on a plane so it will looke 3d
+// controls.target.x = 0.5
+// controls.target.y = 0.1
+
+
+// when u change the target you have to update the controls
+controls.update()
 
 /**
  * Renderer
